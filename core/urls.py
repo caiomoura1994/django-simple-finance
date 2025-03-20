@@ -22,5 +22,7 @@ from rest_framework.documentation import include_docs_urls
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/docs/", include_docs_urls(title="Finance Management API")),
+    # API endpoints
     path("api/finances/", include("finances.urls")),
+    path("api/auth/", include("identity.urls")),
 ]
