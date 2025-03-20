@@ -8,6 +8,12 @@ from decimal import Decimal
 from django.utils import timezone
 
 class TransactionViewSetTest(TestCase):
+    def tearDown(self):
+        Transaction.objects.all().delete()
+        Category.objects.all().delete()
+        Account.objects.all().delete()
+        User.objects.all().delete()
+
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(
@@ -43,7 +49,7 @@ class TransactionViewSetTest(TestCase):
         url = reverse('transaction-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data.get('count'), 1)
 
     def test_create_transaction(self):
         url = reverse('transaction-list')

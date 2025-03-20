@@ -7,6 +7,9 @@ from rest_framework.authtoken.models import Token
 from unittest import skip
 
 class AuthenticationTests(TestCase):
+    def tearDown(self):
+        User.objects.all().delete()
+
     def setUp(self):
         self.client = APIClient()
         self.register_url = reverse('identity:register')

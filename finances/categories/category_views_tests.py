@@ -26,9 +26,9 @@ class CategoryViewSetTests(APITestCase):
     def test_list_categories(self):
         response = self.client.get(reverse('category-list'))
         assert response.status_code == 200
-        assert len(response.json()) == 1
-        assert response.json()[0]['name'] == 'Test Category'
-        assert response.json()[0]['slug'] == 'test-category'
+        assert response.data.get('count') == 1
+        assert response.data.get('results')[0]['name'] == 'Test Category'
+        assert response.data.get('results')[0]['slug'] == 'test-category'
 
     def test_update_category(self):
         response = self.client.put(reverse('category-detail', args=[self.category.slug]), data={'name': 'Updated Category'})

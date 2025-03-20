@@ -20,12 +20,15 @@ class AccountViewSetTest(TestCase):
             balance=1000.00,
             owner=self.user
         )
+    def tearDown(self):
+        Account.objects.all().delete()
+        User.objects.all().delete()
 
     def test_list_accounts(self):
         url = reverse('account-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data.get('count'), 1)
 
     def test_create_account(self):
         url = reverse('account-list')
