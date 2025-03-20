@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from finances.categories.serializers import CategorySerializer
+from finances.categories.category_serializers import CategorySerializer
 from finances.models import Category
 from rest_framework.permissions import IsAuthenticated
 

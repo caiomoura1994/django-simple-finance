@@ -1,5 +1,3 @@
-# pytest
-
 from rest_framework.test import APIClient
 from rest_framework.test import APITestCase
 from finances.models import Category

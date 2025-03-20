@@ -1,12 +1,13 @@
 from django.urls import include, path
 from rest_framework import routers
 
-from finances.categories.views import CategoryViewSet
+from finances.categories.category_views import CategoryViewSet
+from finances.accounts.account_views import AccountViewSet
 
-category_router = routers.DefaultRouter()
-category_router.register(r'categories', CategoryViewSet)
-
+router = routers.DefaultRouter()
+router.register(r'categories', CategoryViewSet)
+router.register(r'accounts', AccountViewSet)
 
 urlpatterns = [
-    path('categories/', include(category_router.urls)),
+    path('', include(router.urls)),
 ]
