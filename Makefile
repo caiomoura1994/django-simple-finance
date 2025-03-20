@@ -45,7 +45,7 @@ shell: ## Open Django shell
 	. $(VENV_BIN)/activate && $(MANAGE) shell
 
 test: ## Run tests
-	. $(VENV_BIN)/activate && PYTHONPATH=$(PWD) pytest
+	. $(VENV_BIN)/activate && pytest
 
 test-watch: ## Run tests in watch mode
 	test --watch

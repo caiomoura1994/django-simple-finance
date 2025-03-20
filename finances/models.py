@@ -2,33 +2,24 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.utils import timezone
-
-class KindOfTransaction(models.TextChoices):
-    INCOME = "INCOME", "Income"
-    EXPENSE = "EXPENSE", "Expense"
-
-class BaseModel(models.Model):
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
+from core.base_model import BaseModel
 
 class Category(BaseModel):
     name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255)
     description = models.TextField(blank=True)
-
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='my_categories')
     class Meta:
         verbose_name_plural = "Categories"
         ordering = ['name']
-        unique_together = ['name', 'owner']
+        unique_together = ['owner', 'slug']
 
     def __str__(self):
-        return f"{self.name}"
+        return f"{self.pk} - {self.name}"
 
 class Account(BaseModel):
     name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255)
     balance = models.DecimalField(
         max_digits=15, 
         decimal_places=2, 
@@ -37,15 +28,19 @@ class Account(BaseModel):
     )
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
-
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='my_accounts')
     class Meta:
         ordering = ['name']
-        unique_together = ['name', 'owner']
+        unique_together = ['owner', 'slug']
 
     def __str__(self):
-        return f"{self.name} - {self.balance}"
+        return f"{self.pk} - {self.name} - {self.balance}"
 
 class Transaction(BaseModel):
+    class KindOfTransaction(models.TextChoices):
+      INCOME = "INCOME", "Income"
+      EXPENSE = "EXPENSE", "Expense"
+
     kind_of_transaction = models.CharField(
         max_length=10, 
         choices=KindOfTransaction.choices,
