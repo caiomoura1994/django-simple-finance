@@ -5,10 +5,10 @@ from business_suppliers.views import SupplierViewSet, SupplierTransactionViewSet
 
 # Create the main router
 router = DefaultRouter()
-router.register(r'suppliers', SupplierViewSet, basename='supplier')
+router.register(r'', SupplierViewSet, basename='supplier')
 
 # Create the nested router for supplier transactions
-supplier_router = routers.NestedSimpleRouter(router, r'suppliers', lookup='supplier')
+supplier_router = routers.NestedSimpleRouter(router, r'', lookup='supplier')
 supplier_router.register(r'transactions', SupplierTransactionViewSet, basename='supplier-transaction')
 
 urlpatterns = [

@@ -25,5 +25,5 @@ urlpatterns = [
     # API endpoints
     path("api/finances/", include("finances.urls")),
     path("api/auth/", include("identity.urls")),
-    path("api/business_suppliers/", include("business_suppliers.urls")),
+    path("api/suppliers/", include("business_suppliers.urls")),
 ]
