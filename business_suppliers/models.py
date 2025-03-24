@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from core.base_model import BaseModel
+from finances.models import Transaction
 
 class Supplier(BaseModel):
     name = models.CharField(max_length=255)
@@ -16,3 +17,14 @@ class Supplier(BaseModel):
 
     def __str__(self):
         return f"{self.pk} - {self.name}"
+
+class SupplierTransaction(BaseModel):
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='transactions')
+    transaction = models.OneToOneField(Transaction, on_delete=models.CASCADE, related_name='supplier_transaction')
+
+    class Meta:
+        ordering = ['-transaction__date']
+        unique_together = ['supplier', 'transaction']
+
+    def __str__(self):
+        return f"{self.supplier.name} - {self.transaction.description[:30]}"

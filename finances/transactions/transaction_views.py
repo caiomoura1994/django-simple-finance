@@ -18,7 +18,7 @@ class TransactionViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.
     ordering_fields = ['date', 'amount', 'created_at']
     ordering = ['-date']  # Default ordering
     search_fields = ['description']
-    queryset = Transaction.objects.all()
+    queryset = Transaction.objects.none()
 
     def get_queryset(self):
         return Transaction.objects.filter(owner=self.request.user)
