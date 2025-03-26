@@ -3,9 +3,14 @@ djangorestframework>=3.14.0
 django-filter>=23.5
 django-cors-headers>=4.3.1
 django-environ>=0.11.2
-django-celery-results>=2.5.1
-django-celery-beat>=2.5.0
-celery>=5.3.6
-redis>=5.0.1
+celery==5.4.0
+redis==5.2.1
 psycopg2-binary>=2.9.9
 drf-nested-routers>=0.94.1
+
+# OFX Processing
+ofxparse==0.20
+
+# Excel Processing
+pandas==2.0.3
+openpyxl==3.1.5
