@@ -53,8 +53,8 @@ class Transaction(BaseModel):
     )
     date = models.DateTimeField(default=timezone.now)
     description = models.TextField()
-    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='transactions')
-    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name='transactions')
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='transactions')
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='transactions')
     
     # # Fields for AI processing
     # receipt_image = models.ImageField(upload_to='receipts/%Y/%m/', null=True, blank=True)
@@ -71,6 +71,7 @@ class Transaction(BaseModel):
 
 class TransactionImport(BaseModel):
     class ImportSource(models.TextChoices):
+        EXCEL = "EXCEL", "Excel File"
         OFX = "OFX", "OFX File"
         IMAGE = "IMAGE", "Image with AI"
         API = "API", "API Integration"

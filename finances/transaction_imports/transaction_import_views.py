@@ -21,7 +21,7 @@ class TransactionImportViewSet(viewsets.ModelViewSet):
     def process(self, request, pk=None):
         import_obj = self.get_object()
         
-        if import_obj.status != TransactionImport.ImportStatus.PENDING:
+        if import_obj.status != TransactionImport.ImportStatus.PENDING.value:
             return Response(
                 {'error': 'Import already processed or in progress'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -29,7 +29,7 @@ class TransactionImportViewSet(viewsets.ModelViewSet):
 
         task = process_transaction_import.delay(import_obj.id)
         import_obj.celery_task_id = task.id
-        import_obj.status = TransactionImport.ImportStatus.PROCESSING
+        import_obj.status = TransactionImport.ImportStatus.PROCESSING.value
         import_obj.save()
         
         return Response({

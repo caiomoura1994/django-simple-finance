@@ -71,3 +71,5 @@ cover/
 *.bak
 *.tmp
 *.temp 
+
+imports/

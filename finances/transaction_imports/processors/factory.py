@@ -1,4 +1,5 @@
 from .excel_processor_service import ExcelTransactionService
+from .ofx_processor_service import OFXTransactionService
 from .base import TransactionProcessor
 
 class ProcessorFactory:
@@ -7,6 +8,8 @@ class ProcessorFactory:
     PROCESSORS = {
         '.xlsx': ExcelTransactionService,
         '.xls': ExcelTransactionService,
+        '.ofx': OFXTransactionService,
+        '.qfx': OFXTransactionService,  # Quicken Financial Exchange (mesmo formato que OFX)
     }
     
     @classmethod
@@ -15,7 +18,7 @@ class ProcessorFactory:
         Retorna o processador apropriado para o tipo de arquivo
         
         Args:
-            file_extension (str): Extensão do arquivo (ex: .xlsx, .xls)
+            file_extension (str): Extensão do arquivo (ex: .xlsx, .xls, .ofx)
             
         Returns:
             TransactionProcessor: Instância do processador apropriado

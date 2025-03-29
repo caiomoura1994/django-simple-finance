@@ -66,7 +66,7 @@ class ExcelTransactionService(TransactionProcessor):
         """Processa o arquivo Excel e retorna uma lista de transações"""
         try:
             # Ler o arquivo Excel
-            df = pd.read_excel(file_path)
+            df = pd.read_excel(file_path, engine='openpyxl')
             
             # Validar estrutura e dados
             self.validate_columns(df)
@@ -112,6 +112,7 @@ class ExcelTransactionService(TransactionProcessor):
             return transactions
 
         except Exception as e:
+            # *** ValueError: Excel file format cannot be determined, you must specify an engine manually.
             raise ValueError(f"Erro ao processar arquivo Excel: {str(e)}")
 
     @classmethod

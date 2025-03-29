@@ -1,10 +1,6 @@
 from celery import shared_task
 from celery.utils.log import get_task_logger
-from finances.models import TransactionImport, Transaction, Category, Account
-from django.core.files.storage import default_storage
-from ofxparse import OfxParser
-from datetime import datetime
-from .processors.excel_processor_service import ExcelTransactionService
+from finances.models import TransactionImport
 import os
 from .processors import ProcessorFactory
 
@@ -14,9 +10,8 @@ logger = get_task_logger(__name__)
 def process_transaction_import(self, import_id):
     import_obj = TransactionImport.objects.get(id=import_id)
     logger.info(f"Starting to process import {import_id}")
-    
+    file_path = import_obj.file.path
     try:
-        file_path = import_obj.file.path
         file_extension = os.path.splitext(file_path)[1]
         
         # Obter o processador apropriado
