@@ -19,13 +19,51 @@ class ExcelTransactionService(TransactionProcessor):
     @classmethod
     def create_template(cls) -> pd.DataFrame:
         """Cria um template Excel com as colunas necessárias e dados de exemplo"""
+        now = timezone.now()
+        
         example_data = {
-            'date': [timezone.now().strftime('%Y-%m-%d')],
-            'description': ['Exemplo de transação'],
-            'amount': [100.00],
-            'kind_of_transaction': ['EXPENSE'],  # INCOME ou EXPENSE
-            'category': ['Alimentação'],
-            'account': ['Conta Principal']
+            'date': [
+                now.strftime('%Y-%m-%d'),  # Hoje
+                (now - timezone.timedelta(days=1)).strftime('%Y-%m-%d'),  # Ontem
+                (now - timezone.timedelta(days=2)).strftime('%Y-%m-%d'),  # 2 dias atrás
+                now.strftime('%Y-%m-%d'),  # Hoje
+                now.strftime('%Y-%m-%d'),  # Hoje
+            ],
+            'description': [
+                'Compra no Supermercado',
+                'Salário',
+                'Conta de Luz',
+                'Academia',
+                'Venda de Produto',
+            ],
+            'amount': [
+                150.75,  # Supermercado
+                5000.00,  # Salário
+                89.90,   # Conta de Luz
+                99.90,   # Academia
+                250.00,  # Venda
+            ],
+            'kind_of_transaction': [
+                'EXPENSE',  # Supermercado
+                'INCOME',   # Salário
+                'EXPENSE',  # Conta de Luz
+                'EXPENSE',  # Academia
+                'INCOME',   # Venda
+            ],
+            'category': [
+                'Alimentação',
+                'Salário',
+                'Moradia',
+                'Saúde',
+                'Vendas',
+            ],
+            'account': [
+                'Conta Principal',
+                'Conta Salário',
+                'Conta Principal',
+                'Cartão de Crédito',
+                'Conta Principal',
+            ]
         }
         df = pd.DataFrame(example_data)
         return df
