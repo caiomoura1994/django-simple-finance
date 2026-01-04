@@ -1,14 +1,6 @@
 version: '3.8'
 
 services:
-  rabbitmq:
-    image: rabbitmq
-    ports:
-      - "5672:5672"   # AMQP protocol port
-      - "15672:15672" # Management UI port
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-
   redis:
     image: redis
     ports:
@@ -17,5 +9,4 @@ services:
       - redis_data:/data
 
 volumes:
-  rabbitmq_data:
   redis_data: 
