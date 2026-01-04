@@ -65,7 +65,45 @@ class TransactionImportViewSet(viewsets.ModelViewSet):
                 'task_id': task.id
             })
         except Exception as e:
-            logger.error(f"Error creating transaction import for user {request.user.id}: {str(e)}", exc_info=True)
+            logger.error("Error creating transaction import for user {}: {}", request.user.id, str(e), exc_info=True)
+            raise
+    
+    @action(detail=True, methods=['post'])
+    def process(self, request, pk=None):
+        """Process an existing transaction import"""
+        logger.info(f"User {request.user.id} requested to process import {pk}")
+        try:
+            import_obj = self.get_object()
+            
+            # Check ownership
+            if import_obj.owner != request.user:
+                return Response(
+                    {'error': 'Permission denied'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Check if already processed or in progress
+            if import_obj.status != TransactionImport.ImportStatus.PENDING.value:
+                logger.warning(f"Import {import_obj.id} already processed or in progress - Status: {import_obj.status}")
+                return Response(
+                    {'error': 'Import already processed or in progress'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Queue the task
+            task = process_transaction_import.delay(import_obj.id)
+            import_obj.celery_task_id = task.id
+            import_obj.status = TransactionImport.ImportStatus.PROCESSING.value
+            import_obj.save()
+            
+            logger.info(f"Transaction import {import_obj.id} queued for processing - Task ID: {task.id}")
+            
+            return Response({
+                'message': 'Import processing started',
+                'task_id': task.id
+            })
+        except Exception as e:
+            logger.error("Error processing import {} for user {}: {}", pk, request.user.id, str(e), exc_info=True)
             raise
     
     @action(detail=False, methods=['get'])
@@ -103,7 +141,7 @@ class TransactionImportViewSet(viewsets.ModelViewSet):
             logger.info(f"Template downloaded successfully for user {request.user.id} - File: {filename}")
             return response
         except Exception as e:
-            logger.error(f"Error generating template for user {request.user.id}: {str(e)}", exc_info=True)
+            logger.error("Error generating template for user {}: {}", request.user.id, str(e), exc_info=True)
             raise 
     
     def update_status(self, request, *args, **kwargs):

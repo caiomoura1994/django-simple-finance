@@ -34,7 +34,7 @@ class RegisterView(generics.CreateAPIView):
                 'token': token.key
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
-            logger.error(f"Error registering user with email {email}: {str(e)}", exc_info=True)
+            logger.error("Error registering user with email {}: {}", email, str(e), exc_info=True)
             raise
 
 class LoginView(ObtainAuthToken):
@@ -84,7 +84,7 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
                 logger.info(f"User {request.user.id} profile updated successfully")
             return response
         except Exception as e:
-            logger.error(f"Error updating profile for user {request.user.id}: {str(e)}", exc_info=True)
+            logger.error("Error updating profile for user {}: {}", request.user.id, str(e), exc_info=True)
             raise
 
 class ChangePasswordView(generics.UpdateAPIView):
@@ -115,7 +115,7 @@ class ChangePasswordView(generics.UpdateAPIView):
                 'token': token.key
             })
         except Exception as e:
-            logger.error(f"Error changing password for user {request.user.id}: {str(e)}", exc_info=True)
+            logger.error("Error changing password for user {}: {}", request.user.id, str(e), exc_info=True)
             raise
 
 class LogoutView(APIView):
@@ -135,7 +135,7 @@ class LogoutView(APIView):
                 status=status.HTTP_200_OK
             )
         except Exception as e:
-            logger.error(f"Error logging out user {request.user.id}: {str(e)}", exc_info=True)
+            logger.error("Error logging out user {}: {}", request.user.id, str(e), exc_info=True)
             return Response(
                 {'error': 'Something went wrong'},
                 status=status.HTTP_400_BAD_REQUEST

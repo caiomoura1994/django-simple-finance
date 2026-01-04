@@ -33,7 +33,7 @@ class TransactionViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.
                 logger.info(f"Transaction {transaction_id} created successfully by user {request.user.id}")
             return response
         except Exception as e:
-            logger.error(f"Error creating transaction for user {request.user.id}: {str(e)}", exc_info=True)
+            logger.error("Error creating transaction for user {}: {}", request.user.id, str(e), exc_info=True)
             raise
 
     @action(detail=False, methods=['get'])
