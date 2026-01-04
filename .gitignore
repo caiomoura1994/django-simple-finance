@@ -73,3 +73,9 @@ cover/
 *.temp 
 
 imports/
+
+# Google Cloud credentials
+credentials/
+*.json
+!package.json
+!package-lock.json

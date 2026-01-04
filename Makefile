@@ -3,7 +3,7 @@
 # Variables
 PYTHON = python
 MANAGE = $(PYTHON) manage.py
-VENV = venv
+VENV = .venv
 VENV_BIN = $(VENV)/bin
 PIP = $(VENV_BIN)/pip
 
@@ -98,4 +98,9 @@ docker-stop-all: ## Stop all containers
 setup-dev: install-dev migrate ## Setup development environment
 
 # Production setup
-setup-prod: install migrate collectstatic ## Setup production environment 
+setup-prod: install migrate collectstatic ## Setup production environment
+
+# Google Cloud credentials
+setup-gcp-credentials: ## Setup Google Cloud credentials using logged-in user (gcloud auth application-default login)
+	@gcloud auth application-default login
+	@echo "Credentials configured! Using Application Default Credentials from your gcloud CLI user." 
