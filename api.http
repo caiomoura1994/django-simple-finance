@@ -1,0 +1,144 @@
+@baseUrl = http://127.0.0.1:8000
+@contentType = application/json
+@username = api_http_demo
+@email = api_http_demo@example.com
+@password = ApiHttpDemo123!
+
+# Run the requests from top to bottom.
+# Response references use the VS Code REST Client syntax.
+
+### 1. Register the demo user (run once)
+# @name register
+POST {{baseUrl}}/api/auth/register/
+Content-Type: {{contentType}}
+
+{
+  "username": "{{username}}",
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "password2": "{{password}}",
+  "first_name": "Interview",
+  "last_name": "Demo"
+}
+
+### 2. Login and capture the token
+# @name login
+POST {{baseUrl}}/api/auth/login/
+Content-Type: {{contentType}}
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### 3. Read the authenticated profile
+GET {{baseUrl}}/api/auth/profile/
+Authorization: Token {{login.response.body.$.token}}
+
+### 4. Create an account
+# @name createAccount
+POST {{baseUrl}}/api/finances/accounts/
+Authorization: Token {{login.response.body.$.token}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Main Account",
+  "description": "Account created from api.http"
+}
+
+### 5. Set the account balance
+POST {{baseUrl}}/api/finances/accounts/{{createAccount.response.body.$.slug}}/adjust_balance/
+Authorization: Token {{login.response.body.$.token}}
+Content-Type: {{contentType}}
+
+{
+  "amount": "5000.00"
+}
+
+### 6. Create a category
+# @name createCategory
+POST {{baseUrl}}/api/finances/categories/
+Authorization: Token {{login.response.body.$.token}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Food",
+  "description": "Food and grocery expenses"
+}
+
+### 7. Create an expense transaction
+# @name createTransaction
+POST {{baseUrl}}/api/finances/transactions/
+Authorization: Token {{login.response.body.$.token}}
+Content-Type: {{contentType}}
+
+{
+  "kind_of_transaction": "EXPENSE",
+  "amount": "150.75",
+  "date": "2026-09-20T12:00:00Z",
+  "description": "Grocery store",
+  "category": {{createCategory.response.body.$.id}},
+  "account": {{createAccount.response.body.$.id}}
+}
+
+### 8. List transactions
+GET {{baseUrl}}/api/finances/transactions/
+Authorization: Token {{login.response.body.$.token}}
+
+### 9. Calculate the financial summary
+GET {{baseUrl}}/api/finances/transactions/summary/?start_date=2026-09-01&end_date=2026-09-30
+Authorization: Token {{login.response.body.$.token}}
+
+### 10. Group transactions by category
+GET {{baseUrl}}/api/finances/transactions/by_category/
+Authorization: Token {{login.response.body.$.token}}
+
+### 11. Group transactions by account
+GET {{baseUrl}}/api/finances/transactions/by_account/
+Authorization: Token {{login.response.body.$.token}}
+
+### 12. Create a supplier
+# @name createSupplier
+POST {{baseUrl}}/api/suppliers/
+Authorization: Token {{login.response.body.$.token}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Demo Supplier",
+  "description": "Supplier created from api.http",
+  "email": "supplier@example.com",
+  "phone": "+55 11 99999-9999"
+}
+
+### 13. Download the Excel template
+GET {{baseUrl}}/api/finances/transaction-imports/download_template/
+Authorization: Token {{login.response.body.$.token}}
+
+### 14. Upload the sample Excel file without processing it
+# @name createImport
+POST {{baseUrl}}/api/finances/transaction-imports/
+Authorization: Token {{login.response.body.$.token}}
+Content-Type: multipart/form-data; boundary=FinanceBoundary
+
+--FinanceBoundary
+Content-Disposition: form-data; name="source"
+
+EXCEL
+--FinanceBoundary
+Content-Disposition: form-data; name="file"; filename="transactions.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+< ./examples/transactions.xlsx
+--FinanceBoundary--
+
+### 15. Send the import to Celery
+POST {{baseUrl}}/api/finances/transaction-imports/{{createImport.response.body.$.id}}/process/
+Authorization: Token {{login.response.body.$.token}}
+
+### 16. Check the import status
+GET {{baseUrl}}/api/finances/transaction-imports/{{createImport.response.body.$.id}}/
+Authorization: Token {{login.response.body.$.token}}
+
+### 17. List transactions after the import
+GET {{baseUrl}}/api/finances/transactions/
+Authorization: Token {{login.response.body.$.token}}
