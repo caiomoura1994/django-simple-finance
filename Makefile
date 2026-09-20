@@ -1,11 +1,17 @@
-.PHONY: help install install-dev migrate makemigrations superuser run run-prod shell test clean lint format collectstatic
+.PHONY: help install install-dev migrate makemigrations superuser run run-prod shell test clean lint format collectstatic docker-up docker-down
 
 # Variables
 PYTHON = python
 MANAGE = $(PYTHON) manage.py
-VENV = venv
+VENV = .venv
 VENV_BIN = $(VENV)/bin
 PIP = $(VENV_BIN)/pip
+
+# Load environment variables
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
 
 help: ## Show this help message
 	@echo 'Usage:'
@@ -37,6 +43,12 @@ superuser: ## Create a superuser
 
 run: ## Run development server
 	. $(VENV_BIN)/activate && $(MANAGE) runserver
+
+run-celery: ## Run celery worker
+	. $(VENV_BIN)/activate && celery -A core worker --loglevel=info
+
+run-celery-beat: ## Run celery beat
+	. $(VENV_BIN)/activate && celery -A core beat --loglevel=info
 
 run-prod: ## Run production server
 	. $(VENV_BIN)/activate && DJANGO_ENV=production $(MANAGE) runserver
@@ -79,8 +91,16 @@ db-dev-reset: ## Reset development database (SQLite)
 	rm -f db.sqlite3
 	. $(VENV_BIN)/activate && $(MANAGE) migrate
 
+docker-stop-all: ## Stop all containers
+	docker stop $(docker ps -a -q)
+
 # Development setup
 setup-dev: install-dev migrate ## Setup development environment
 
 # Production setup
-setup-prod: install migrate collectstatic ## Setup production environment 
+setup-prod: install migrate collectstatic ## Setup production environment
+
+# Google Cloud credentials
+setup-gcp-credentials: ## Setup Google Cloud credentials using logged-in user (gcloud auth application-default login)
+	@gcloud auth application-default login
+	@echo "Credentials configured! Using Application Default Credentials from your gcloud CLI user." 

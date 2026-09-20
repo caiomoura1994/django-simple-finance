@@ -53,8 +53,8 @@ class Transaction(BaseModel):
     )
     date = models.DateTimeField(default=timezone.now)
     description = models.TextField()
-    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='transactions')
-    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name='transactions')
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='transactions')
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='transactions')
     
     # # Fields for AI processing
     # receipt_image = models.ImageField(upload_to='receipts/%Y/%m/', null=True, blank=True)
@@ -68,3 +68,32 @@ class Transaction(BaseModel):
 
     def __str__(self):
         return f"{self.pk} - {self.date.strftime('%Y-%m-%d')} - {self.description[:30]}"
+
+class TransactionImport(BaseModel):
+    class ImportSource(models.TextChoices):
+        EXCEL = "EXCEL", "Excel File"
+        OFX = "OFX", "OFX File"
+        IMAGE = "IMAGE", "Image with AI"
+        API = "API", "API Integration"
+        MANUAL = "MANUAL", "Manual Entry"
+
+    class ImportStatus(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        PROCESSING = "PROCESSING", "Processing"
+        COMPLETED = "COMPLETED", "Completed"
+        FAILED = "FAILED", "Failed"
+
+    source = models.CharField(max_length=10, choices=ImportSource.choices)
+    status = models.CharField(max_length=10, choices=ImportStatus.choices, default=ImportStatus.PENDING)
+    file = models.FileField(upload_to='imports/%Y/%m/', null=True, blank=True)
+    total_items = models.IntegerField(default=0)
+    processed_items = models.IntegerField(default=0)
+    error_message = models.TextField(blank=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transaction_imports')
+    celery_task_id = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.source} Import - {self.created_at}"
