@@ -2,14 +2,25 @@ from decimal import Decimal
 from unittest.mock import Mock
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from finances.models import Account, Category, Transaction, TransactionCategoryRule
 
-from .contracts import CategorizationProvider, CategorizationSuggestion
+from .contracts import (
+    CategorizationCandidate,
+    CategorizationProvider,
+    CategorizationSuggestion,
+    CategoryOption,
+)
+from .providers import (
+    MockGeminiCategorizationProvider,
+    MockGrokCategorizationProvider,
+    MockOpenAICategorizationProvider,
+    get_categorization_provider,
+)
 from .service import CategorizationService, normalize_transaction_description
 
 
@@ -121,6 +132,39 @@ class CategorizationServiceTest(TestCase):
         )
 
         self.assertEqual(decisions, {})
+
+    def test_mock_provider_aliases_return_structured_suggestions(self):
+        providers = {
+            "mock_gemini": MockGeminiCategorizationProvider,
+            "mock_openai": MockOpenAICategorizationProvider,
+            "mock_grok": MockGrokCategorizationProvider,
+        }
+        candidate = CategorizationCandidate(
+            reference="transaction-1",
+            description="UBER *TRIP 8392",
+            kind_of_transaction=Transaction.KindOfTransaction.EXPENSE,
+            amount=Decimal("24.90"),
+        )
+        categories = [
+            CategoryOption(id=self.transport.id, name=self.transport.name),
+            CategoryOption(id=self.other.id, name=self.other.name),
+        ]
+
+        for alias, provider_class in providers.items():
+            with self.subTest(alias=alias), override_settings(
+                AI_CATEGORIZATION_PROVIDER=alias
+            ):
+                provider = get_categorization_provider()
+                suggestions = provider.suggest_categories(
+                    candidates=[candidate],
+                    categories=categories,
+                )
+
+                self.assertIsInstance(provider, provider_class)
+                self.assertEqual(len(suggestions), 1)
+                self.assertEqual(suggestions[0].reference, "transaction-1")
+                self.assertEqual(suggestions[0].category_id, self.transport.id)
+                self.assertIn(provider.provider_name, suggestions[0].reasoning)
 
 
 class TransactionCategoryRuleViewSetTest(TestCase):

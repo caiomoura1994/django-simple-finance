@@ -165,11 +165,11 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
-# Provider-neutral AI categorization adapter. Replace this import path when a
-# Gemini, Grok, Anthropic or another provider implementation is available.
+# Mock aliases: mock_gemini, mock_openai, mock_grok, or none.
+# A dotted class path can replace them when a real adapter is implemented.
 AI_CATEGORIZATION_PROVIDER = os.getenv(
     'AI_CATEGORIZATION_PROVIDER',
-    'finances.categorization.providers.NullCategorizationProvider',
+    'mock_openai',
 )
 
 # Email defaults are safe for local study: messages are printed to the console.
@@ -183,6 +183,13 @@ DEFAULT_FROM_EMAIL = os.getenv(
     'Django Simple Finance <finance@example.com>',
 )
 SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@example.com')
+
+# Mock aliases: mock_resend or mock_mailgun. Both use EMAIL_BACKEND locally.
+# A dotted class path can replace them when a real adapter is implemented.
+TRANSACTION_EMAIL_PROVIDER = os.getenv(
+    'TRANSACTION_EMAIL_PROVIDER',
+    'mock_resend',
+)
 
 # Google Cloud Configuration
 GOOGLE_CLOUD_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT', '')

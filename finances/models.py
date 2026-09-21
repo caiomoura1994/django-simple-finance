@@ -106,6 +106,8 @@ class TransactionImport(BaseModel):
         default=ReportEmailStatus.NOT_SCHEDULED,
     )
     report_email_attempts = models.PositiveIntegerField(default=0)
+    report_email_provider = models.CharField(max_length=50, blank=True)
+    report_email_message_id = models.CharField(max_length=255, blank=True)
     report_email_sent_at = models.DateTimeField(null=True, blank=True)
     report_email_error = models.TextField(blank=True)
 

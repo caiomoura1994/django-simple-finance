@@ -2,13 +2,14 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 from django.db import transaction as database_transaction
 from django.db.models import Sum
 from django.template.loader import render_to_string
 from django.utils import timezone
 
 from finances.models import Transaction, TransactionImport, TransactionImportItem
+
+from .email_providers import EmailMessagePayload, get_transaction_email_provider
 
 
 class ReportEmailDeliveryError(Exception):
@@ -29,6 +30,9 @@ class TransactionImportReport:
 
 class TransactionImportReportEmailService:
     """Build and send a minimal, aggregate-only financial import report."""
+
+    def __init__(self, provider=None):
+        self.provider = provider
 
     def send(self, import_id: int) -> bool:
         transaction_import = self._claim_delivery(import_id)
@@ -56,30 +60,33 @@ class TransactionImportReportEmailService:
             "finances/emails/transaction_import_report.html",
             context,
         )
-        message = EmailMultiAlternatives(
+        payload = EmailMessagePayload(
+            recipient=recipient,
             subject=subject,
-            body=text_body,
+            text_body=text_body,
+            html_body=html_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[recipient],
-            reply_to=[settings.SUPPORT_EMAIL],
-            headers={
-                "X-Idempotency-Key": f"transaction-import-report-{transaction_import.id}"
-            },
+            reply_to=settings.SUPPORT_EMAIL,
+            idempotency_key=f"transaction-import-report-{transaction_import.id}",
         )
-        message.attach_alternative(html_body, "text/html")
 
         try:
-            message.send(fail_silently=False)
+            provider = self.provider or get_transaction_email_provider()
+            receipt = provider.send(payload)
         except Exception as exc:
             self._mark_failed(transaction_import, str(exc))
             raise ReportEmailDeliveryError(str(exc)) from exc
 
         transaction_import.report_email_status = TransactionImport.ReportEmailStatus.SENT
+        transaction_import.report_email_provider = receipt.provider
+        transaction_import.report_email_message_id = receipt.message_id
         transaction_import.report_email_sent_at = timezone.now()
         transaction_import.report_email_error = ""
         transaction_import.save(
             update_fields=[
                 "report_email_status",
+                "report_email_provider",
+                "report_email_message_id",
                 "report_email_sent_at",
                 "report_email_error",
                 "updated_at",

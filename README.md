@@ -28,14 +28,14 @@ flowchart TD
     B --> C[TransactionImportOrchestrator]
     C --> D[Deterministic file parser]
     D --> E[Apply learned rules]
-    E --> F[Ask configured AI for unresolved items]
+    E --> F[Ask configured AI adapter for unresolved items]
     F --> G{Human review required?}
     G -->|Yes| H[Create review drafts]
     H --> I[Human approves or rejects]
     I --> J[Resume orchestrator]
     G -->|No| J
     J --> K[Complete import]
-    K --> L[Queue aggregate email report]
+    K --> L[Queue report through configured email adapter]
 ```
 
 `finances/transaction_imports/orchestrator.py` is the walkthrough entry point.
@@ -63,17 +63,24 @@ through `/api/finances/transaction-category-rules/`.
 The provider boundary is `CategorizationProvider` in
 `finances/categorization/contracts.py`. It receives provider-neutral
 `CategorizationCandidate` and `CategoryOption` objects and must return
-structured `CategorizationSuggestion` objects. The default adapter makes no
-external calls:
+structured `CategorizationSuggestion` objects. Three deterministic mocks are
+included for the walkthrough; none makes network calls:
 
 ```env
-AI_CATEGORIZATION_PROVIDER=finances.categorization.providers.NullCategorizationProvider
+AI_CATEGORIZATION_PROVIDER=mock_openai
 ```
 
-To add Gemini, Grok, Anthropic, or another provider, implement that interface
-in a separate adapter and change only this import path. The application layer
-validates references, category ownership, and confidence before accepting a
-suggestion.
+| Alias | Adapter |
+| --- | --- |
+| `mock_gemini` | Simulated Gemini categorization |
+| `mock_openai` | Simulated OpenAI categorization (default) |
+| `mock_grok` | Simulated Grok categorization |
+| `none` | No AI suggestions |
+
+The mocks match known merchant keywords to categories and return provider-
+neutral structured suggestions. To add a real provider, implement the same
+interface and configure its dotted class path. The application layer validates
+references, category ownership, and confidence before accepting a suggestion.
 
 Review endpoints:
 
@@ -97,13 +104,25 @@ supports idempotency.
 Local development prints emails to the console:
 
 ```env
+TRANSACTION_EMAIL_PROVIDER=mock_resend
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 DEFAULT_FROM_EMAIL="Django Simple Finance <finance@example.com>"
 SUPPORT_EMAIL=support@example.com
 ```
 
-Production can use SMTP, SES, or another Django email backend. Configure SPF,
-DKIM, and DMARC for the sending domain before sending real email.
+| Alias | Adapter |
+| --- | --- |
+| `mock_resend` | Simulated Resend delivery (default) |
+| `mock_mailgun` | Simulated Mailgun delivery |
+
+Both mocks deliver through Django's local email backend and return deterministic
+provider message IDs. They preserve the same payload and receipt contracts a
+real Resend or Mailgun adapter must implement, without API keys or network
+calls. The selected provider and message ID are stored on the import.
+
+Production can replace the mock alias with a dotted real adapter class.
+Configure SPF, DKIM, and DMARC for the sending domain before sending real
+email.
 
 ## Technology stack
 
@@ -125,11 +144,15 @@ DKIM, and DMARC for the sending domain before sending real email.
 business_suppliers/              Supplier and supplier-transaction APIs
 core/                            Django settings, URLs, Celery and logging
 finances/
+  categorization/
+    contracts.py                 Provider-neutral AI contract
+    providers.py                 Gemini, OpenAI and Grok mocks
   accounts/                      Account API
   categories/                    Category API
   transactions/                  Transaction and reporting APIs
   transaction_imports/
     orchestrator.py              Complete import business workflow
+    email_providers.py           Resend and Mailgun mocks
     processors/                  Strategy implementations and factory
     report_email_service.py      Aggregate transactional email
     tasks.py                     Thin Celery entry points and retry policy

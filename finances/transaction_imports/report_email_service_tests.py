@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from finances.models import Account, Category, Transaction, TransactionImport, TransactionImportItem
@@ -87,6 +87,10 @@ class TransactionImportReportEmailServiceTest(TestCase):
             mail.outbox[0].extra_headers["X-Idempotency-Key"],
             f"transaction-import-report-{self.transaction_import.id}",
         )
+        self.assertEqual(
+            mail.outbox[0].extra_headers["X-Mock-Email-Provider"],
+            "resend",
+        )
         self.assertIn('html lang="en" dir="ltr"', mail.outbox[0].alternatives[0][0])
         self.transaction_import.refresh_from_db()
         self.assertEqual(
@@ -94,6 +98,25 @@ class TransactionImportReportEmailServiceTest(TestCase):
             TransactionImport.ReportEmailStatus.SENT,
         )
         self.assertEqual(self.transaction_import.report_email_attempts, 1)
+        self.assertEqual(self.transaction_import.report_email_provider, "resend")
+        self.assertTrue(
+            self.transaction_import.report_email_message_id.startswith("mock-resend-")
+        )
+
+    @override_settings(TRANSACTION_EMAIL_PROVIDER="mock_mailgun")
+    def test_can_switch_to_mock_mailgun_without_changing_service(self):
+        sent = TransactionImportReportEmailService().send(self.transaction_import.id)
+
+        self.assertTrue(sent)
+        self.assertEqual(
+            mail.outbox[0].extra_headers["X-Mock-Email-Provider"],
+            "mailgun",
+        )
+        self.transaction_import.refresh_from_db()
+        self.assertEqual(self.transaction_import.report_email_provider, "mailgun")
+        self.assertTrue(
+            self.transaction_import.report_email_message_id.startswith("mock-mailgun-")
+        )
 
     def test_skips_user_without_email(self):
         self.user.email = ""
@@ -109,7 +132,7 @@ class TransactionImportReportEmailServiceTest(TestCase):
             TransactionImport.ReportEmailStatus.SKIPPED,
         )
 
-    @patch("finances.transaction_imports.report_email_service.EmailMultiAlternatives.send")
+    @patch("finances.transaction_imports.email_providers.EmailMultiAlternatives.send")
     def test_marks_failure_for_celery_retry(self, send):
         send.side_effect = RuntimeError("provider unavailable")
 

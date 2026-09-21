@@ -15,6 +15,8 @@ class TransactionImportSerializer(serializers.ModelSerializer):
             'celery_task_id',
             'report_email_status',
             'report_email_attempts',
+            'report_email_provider',
+            'report_email_message_id',
             'report_email_sent_at',
             'report_email_error',
             'created_at',
@@ -29,6 +31,8 @@ class TransactionImportSerializer(serializers.ModelSerializer):
             'celery_task_id',
             'report_email_status',
             'report_email_attempts',
+            'report_email_provider',
+            'report_email_message_id',
             'report_email_sent_at',
             'report_email_error',
         ]
