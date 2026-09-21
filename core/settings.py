@@ -172,6 +172,18 @@ AI_CATEGORIZATION_PROVIDER = os.getenv(
     'finances.categorization.providers.NullCategorizationProvider',
 )
 
+# Email defaults are safe for local study: messages are printed to the console.
+# Production can replace EMAIL_BACKEND with SMTP, SES or another Django backend.
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+DEFAULT_FROM_EMAIL = os.getenv(
+    'DEFAULT_FROM_EMAIL',
+    'Django Simple Finance <finance@example.com>',
+)
+SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@example.com')
+
 # Google Cloud Configuration
 GOOGLE_CLOUD_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT', '')
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')

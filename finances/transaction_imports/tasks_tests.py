@@ -55,7 +55,7 @@ class ProcessTransactionImportTaskTest(TestCase):
             account=self.account,
         )
 
-    @patch("finances.transaction_imports.tasks.ProcessorFactory.get_processor")
+    @patch("finances.transaction_imports.orchestrator.ProcessorFactory.get_processor")
     def test_unknown_description_waits_for_human_review(self, get_processor):
         processor = Mock()
         processor.process.return_value = [self.make_parsed_transaction()]
@@ -73,8 +73,12 @@ class ProcessTransactionImportTaskTest(TestCase):
         self.assertEqual(item.review_status, TransactionImportItem.ReviewStatus.PENDING_REVIEW)
         self.assertIsNone(item.transaction)
         self.assertFalse(Transaction.objects.exists())
+        self.assertEqual(
+            transaction_import.report_email_status,
+            TransactionImport.ReportEmailStatus.NOT_SCHEDULED,
+        )
 
-    @patch("finances.transaction_imports.tasks.ProcessorFactory.get_processor")
+    @patch("finances.transaction_imports.orchestrator.ProcessorFactory.get_processor")
     def test_learned_rule_skips_review_and_tracks_usage(self, get_processor):
         processor = Mock()
         processor.process.return_value = [self.make_parsed_transaction()]
@@ -98,3 +102,7 @@ class ProcessTransactionImportTaskTest(TestCase):
         self.assertEqual(item.transaction.category, self.transport)
         self.assertEqual(rule.times_applied, 1)
         self.assertIsNotNone(rule.last_used_at)
+        self.assertEqual(
+            transaction_import.report_email_status,
+            TransactionImport.ReportEmailStatus.SCHEDULED,
+        )

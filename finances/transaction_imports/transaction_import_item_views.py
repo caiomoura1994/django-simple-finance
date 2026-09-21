@@ -10,10 +10,10 @@ from finances.categorization.service import normalize_transaction_description
 from finances.models import (
     Transaction,
     TransactionCategoryRule,
-    TransactionImport,
     TransactionImportItem,
 )
 
+from .orchestrator import TransactionImportOrchestrator
 from .transaction_import_item_serializers import (
     ApproveTransactionImportItemSerializer,
     TransactionImportItemSerializer,
@@ -111,7 +111,9 @@ class TransactionImportItemViewSet(
                     defaults={"category": category},
                 )
 
-            self._finish_import_if_reviewed(item.transaction_import)
+            TransactionImportOrchestrator().resume_after_human_review(
+                item.transaction_import_id
+            )
 
         return Response(self.get_serializer(item).data)
 
@@ -132,15 +134,8 @@ class TransactionImportItemViewSet(
             item.review_status = TransactionImportItem.ReviewStatus.REJECTED
             item.reviewed_at = timezone.now()
             item.save(update_fields=["review_status", "reviewed_at", "updated_at"])
-            self._finish_import_if_reviewed(item.transaction_import)
+            TransactionImportOrchestrator().resume_after_human_review(
+                item.transaction_import_id
+            )
 
         return Response(self.get_serializer(item).data)
-
-    @staticmethod
-    def _finish_import_if_reviewed(transaction_import):
-        has_pending_items = transaction_import.items.filter(
-            review_status=TransactionImportItem.ReviewStatus.PENDING_REVIEW
-        ).exists()
-        if not has_pending_items:
-            transaction_import.status = TransactionImport.ImportStatus.COMPLETED
-            transaction_import.save(update_fields=["status", "updated_at"])

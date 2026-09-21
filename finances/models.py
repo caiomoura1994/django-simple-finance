@@ -84,6 +84,14 @@ class TransactionImport(BaseModel):
         COMPLETED = "COMPLETED", "Completed"
         FAILED = "FAILED", "Failed"
 
+    class ReportEmailStatus(models.TextChoices):
+        NOT_SCHEDULED = "NOT_SCHEDULED", "Not scheduled"
+        SCHEDULED = "SCHEDULED", "Scheduled"
+        SENDING = "SENDING", "Sending"
+        SENT = "SENT", "Sent"
+        SKIPPED = "SKIPPED", "Skipped"
+        FAILED = "FAILED", "Failed"
+
     source = models.CharField(max_length=10, choices=ImportSource.choices)
     status = models.CharField(max_length=20, choices=ImportStatus.choices, default=ImportStatus.PENDING)
     file = models.FileField(upload_to='imports/%Y/%m/', null=True, blank=True)
@@ -92,6 +100,14 @@ class TransactionImport(BaseModel):
     error_message = models.TextField(blank=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transaction_imports')
     celery_task_id = models.CharField(max_length=255, blank=True)
+    report_email_status = models.CharField(
+        max_length=20,
+        choices=ReportEmailStatus.choices,
+        default=ReportEmailStatus.NOT_SCHEDULED,
+    )
+    report_email_attempts = models.PositiveIntegerField(default=0)
+    report_email_sent_at = models.DateTimeField(null=True, blank=True)
+    report_email_error = models.TextField(blank=True)
 
     class Meta:
         ordering = ['-created_at']

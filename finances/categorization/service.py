@@ -43,12 +43,26 @@ class CategorizationService:
     ) -> dict[int, CategorizationDecision]:
         """Use learned rules first, then ask the configured provider in one batch."""
 
+        rule_decisions = self.apply_learned_rules(transactions, owner)
+        ai_decisions = self.suggest_with_ai(
+            transactions,
+            owner,
+            resolved_indices=set(rule_decisions),
+        )
+        return {**rule_decisions, **ai_decisions}
+
+    def apply_learned_rules(
+        self,
+        transactions: Sequence[Transaction],
+        owner: User,
+    ) -> dict[int, CategorizationDecision]:
+        """Resolve transactions that the user has categorized before."""
+
         decisions: dict[int, CategorizationDecision] = {}
         rules = {
             (rule.normalized_description, rule.kind_of_transaction): rule
             for rule in TransactionCategoryRule.objects.filter(owner=owner).select_related("category")
         }
-        unresolved = []
 
         for index, transaction in enumerate(transactions):
             key = (
@@ -64,15 +78,29 @@ class CategorizationService:
                     reasoning="Previously confirmed by the user.",
                     rule=rule,
                 )
-            else:
-                unresolved.append(
-                    CategorizationCandidate(
-                        reference=str(index),
-                        description=transaction.description,
-                        kind_of_transaction=transaction.kind_of_transaction,
-                        amount=transaction.amount,
-                    )
-                )
+
+        return decisions
+
+    def suggest_with_ai(
+        self,
+        transactions: Sequence[Transaction],
+        owner: User,
+        resolved_indices: Optional[set[int]] = None,
+    ) -> dict[int, CategorizationDecision]:
+        """Ask the configured provider only about unresolved transactions."""
+
+        resolved_indices = resolved_indices or set()
+        decisions: dict[int, CategorizationDecision] = {}
+        unresolved = [
+            CategorizationCandidate(
+                reference=str(index),
+                description=transaction.description,
+                kind_of_transaction=transaction.kind_of_transaction,
+                amount=transaction.amount,
+            )
+            for index, transaction in enumerate(transactions)
+            if index not in resolved_indices
+        ]
 
         if not unresolved:
             return decisions

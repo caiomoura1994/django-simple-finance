@@ -69,6 +69,10 @@ class TransactionImportItemViewSetTest(TestCase):
             self.transaction_import.status,
             TransactionImport.ImportStatus.COMPLETED,
         )
+        self.assertEqual(
+            self.transaction_import.report_email_status,
+            TransactionImport.ReportEmailStatus.SCHEDULED,
+        )
         rule = TransactionCategoryRule.objects.get(owner=self.user)
         self.assertEqual(rule.normalized_description, "uber trip")
         self.assertEqual(rule.category, self.transport)
