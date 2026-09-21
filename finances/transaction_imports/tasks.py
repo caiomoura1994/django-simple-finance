@@ -1,5 +1,8 @@
 from celery import shared_task
-from finances.models import TransactionImport
+from django.db.models import F
+from django.utils import timezone
+from finances.categorization import CategorizationService
+from finances.models import TransactionCategoryRule, TransactionImport, TransactionImportItem
 import os
 from .processors import ProcessorFactory
 from loguru import logger
@@ -9,6 +12,10 @@ def process_transaction_import(self, import_id):
     logger.info(f"Starting to process transaction import {import_id}")
     try:
         import_obj = TransactionImport.objects.get(id=import_id)
+        import_obj.status = TransactionImport.ImportStatus.PROCESSING
+        import_obj.processed_items = 0
+        import_obj.error_message = ""
+        import_obj.save(update_fields=["status", "processed_items", "error_message", "updated_at"])
         file_path = import_obj.file.path
         file_extension = os.path.splitext(file_path)[1]
         
@@ -21,18 +28,79 @@ def process_transaction_import(self, import_id):
         # Processar as transações
         transactions = processor.process(file_path, import_obj.owner)
         logger.info(f"Processed {len(transactions)} transactions from file")
+
+        decisions = {}
+        if import_obj.source in {
+            TransactionImport.ImportSource.OFX,
+            TransactionImport.ImportSource.IMAGE,
+        }:
+            decisions = CategorizationService().categorize(transactions, import_obj.owner)
         
         # Contar total de transações
         import_obj.total_items = len(transactions)
-        import_obj.save()
+        import_obj.save(update_fields=["total_items", "updated_at"])
         
         # Processar cada transação
         errors_count = 0
+        pending_review_count = 0
         for idx, transaction in enumerate(transactions):
             try:
-                transaction.save()
+                decision = decisions.get(idx)
+                suggested_category = transaction.category
+                categorization_source = TransactionImportItem.CategorizationSource.IMPORT
+                ai_confidence = None
+                ai_reasoning = ""
+
+                if decision:
+                    suggested_category = decision.category
+                    categorization_source = decision.source
+                    ai_confidence = decision.confidence
+                    ai_reasoning = decision.reasoning
+
+                requires_review = (
+                    import_obj.source
+                    in {
+                        TransactionImport.ImportSource.OFX,
+                        TransactionImport.ImportSource.IMAGE,
+                    }
+                    and categorization_source
+                    != TransactionImportItem.CategorizationSource.RULE
+                )
+
+                saved_transaction = None
+                review_status = TransactionImportItem.ReviewStatus.PENDING_REVIEW
+                if requires_review:
+                    pending_review_count += 1
+                else:
+                    transaction.category = suggested_category
+                    transaction.save()
+                    saved_transaction = transaction
+                    review_status = TransactionImportItem.ReviewStatus.APPROVED
+
+                    if decision and decision.rule:
+                        TransactionCategoryRule.objects.filter(pk=decision.rule.pk).update(
+                            times_applied=F("times_applied") + 1,
+                            last_used_at=timezone.now(),
+                        )
+
+                TransactionImportItem.objects.create(
+                    owner=import_obj.owner,
+                    transaction_import=import_obj,
+                    transaction=saved_transaction,
+                    kind_of_transaction=transaction.kind_of_transaction,
+                    amount=transaction.amount,
+                    date=transaction.date,
+                    description=transaction.description,
+                    account=transaction.account,
+                    suggested_category=suggested_category,
+                    categorization_source=categorization_source,
+                    review_status=review_status,
+                    ai_confidence=ai_confidence,
+                    ai_reasoning=ai_reasoning,
+                    reviewed_at=timezone.now() if saved_transaction else None,
+                )
                 import_obj.processed_items += 1
-                import_obj.save()
+                import_obj.save(update_fields=["processed_items", "updated_at"])
             except Exception as e:
                 errors_count += 1
                 logger.error(f"Error processing transaction {idx+1}/{len(transactions)} in import {import_id}: {str(e)}", exc_info=True)
@@ -44,9 +112,13 @@ def process_transaction_import(self, import_id):
         else:
             logger.info(f"Import {import_id} completed successfully - {len(transactions)} transactions processed")
         
-        # Marcar como concluído
-        import_obj.status = TransactionImport.ImportStatus.COMPLETED
-        import_obj.save()
+        if pending_review_count:
+            import_obj.status = TransactionImport.ImportStatus.AWAITING_REVIEW
+        elif errors_count:
+            import_obj.status = TransactionImport.ImportStatus.FAILED
+        else:
+            import_obj.status = TransactionImport.ImportStatus.COMPLETED
+        import_obj.save(update_fields=["status", "updated_at"])
         
         # Limpar arquivo temporário
         if os.path.exists(file_path):

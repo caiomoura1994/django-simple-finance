@@ -165,6 +165,13 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
+# Provider-neutral AI categorization adapter. Replace this import path when a
+# Gemini, Grok, Anthropic or another provider implementation is available.
+AI_CATEGORIZATION_PROVIDER = os.getenv(
+    'AI_CATEGORIZATION_PROVIDER',
+    'finances.categorization.providers.NullCategorizationProvider',
+)
+
 # Google Cloud Configuration
 GOOGLE_CLOUD_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT', '')
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')

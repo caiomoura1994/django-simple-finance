@@ -16,6 +16,8 @@ The main engineering focus is the transaction import pipeline: an uploaded file 
 - OpenAPI schema with Swagger UI and ReDoc
 - Structured application logging with Loguru
 - Automated API and processor tests with pytest
+- Human-reviewed transaction categorization with reusable learned rules
+- Provider-neutral AI categorization contract with no vendor lock-in
 
 ## Import architecture
 
@@ -36,6 +38,40 @@ flowchart LR
 ```
 
 The `TransactionProcessor` interface keeps file-specific parsing separate from task orchestration. `ProcessorFactory` selects an implementation from the uploaded file extension, making additional formats possible without changing the Celery task.
+
+## Assisted categorization
+
+OFX transactions first try a rule previously confirmed by the user. A known
+description is categorized automatically. An unknown description becomes a
+draft in `AWAITING_REVIEW`; a future AI adapter can suggest a category, but the
+transaction is only created after the user approves or corrects it.
+
+Approving with `remember_choice=true` stores a normalized description rule.
+For example, both `UBER *TRIP 8392` and `UBER *TRIP 1044` normalize to
+`uber trip` and reuse the same category. Learned rules can be edited or deleted
+through `/api/finances/transaction-category-rules/`.
+
+The provider boundary is `CategorizationProvider` in
+`finances/categorization/contracts.py`. It receives provider-neutral
+`CategorizationCandidate` and `CategoryOption` objects and must return
+structured `CategorizationSuggestion` objects. The default adapter makes no
+external calls:
+
+```env
+AI_CATEGORIZATION_PROVIDER=finances.categorization.providers.NullCategorizationProvider
+```
+
+To add Gemini, Grok, Anthropic, or another provider, implement that interface
+in a separate adapter and change only this import path. The application layer
+validates references, category ownership, and confidence before accepting a
+suggestion.
+
+Review endpoints:
+
+- `GET /api/finances/transaction-import-items/?review_status=PENDING_REVIEW`
+- `POST /api/finances/transaction-import-items/{id}/approve/`
+- `POST /api/finances/transaction-import-items/{id}/reject/`
+- `GET/PATCH/DELETE /api/finances/transaction-category-rules/{id}/`
 
 ## Technology stack
 
