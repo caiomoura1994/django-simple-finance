@@ -146,13 +146,21 @@ core/                            Django settings, URLs, Celery and logging
 finances/
   categorization/
     contracts.py                 Provider-neutral AI contract
-    providers.py                 Gemini, OpenAI and Grok mocks
+    providers/
+      factory.py                 AI provider selection
+      gemini_provider.py         Gemini mock adapter
+      openai_provider.py         OpenAI mock adapter
+      grok_provider.py           Grok mock adapter
   accounts/                      Account API
   categories/                    Category API
   transactions/                  Transaction and reporting APIs
   transaction_imports/
     orchestrator.py              Complete import business workflow
-    email_providers.py           Resend and Mailgun mocks
+    email_providers/
+      contracts.py               Provider-neutral email contract
+      factory.py                 Email provider selection
+      resend_provider.py         Resend mock adapter
+      mailgun_provider.py        Mailgun mock adapter
     processors/                  Strategy implementations and factory
     report_email_service.py      Aggregate transactional email
     tasks.py                     Thin Celery entry points and retry policy

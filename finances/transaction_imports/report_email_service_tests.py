@@ -132,7 +132,10 @@ class TransactionImportReportEmailServiceTest(TestCase):
             TransactionImport.ReportEmailStatus.SKIPPED,
         )
 
-    @patch("finances.transaction_imports.email_providers.EmailMultiAlternatives.send")
+    @patch(
+        "finances.transaction_imports.email_providers."
+        "django_backend_mock_provider.EmailMultiAlternatives.send"
+    )
     def test_marks_failure_for_celery_retry(self, send):
         send.side_effect = RuntimeError("provider unavailable")
 

@@ -2,10 +2,7 @@ import re
 import unicodedata
 from typing import Sequence
 
-from django.conf import settings
-from django.utils.module_loading import import_string
-
-from .contracts import (
+from ..contracts import (
     CategorizationCandidate,
     CategorizationProvider,
     CategorizationSuggestion,
@@ -13,20 +10,8 @@ from .contracts import (
 )
 
 
-class NullCategorizationProvider(CategorizationProvider):
-    """Safe default used until a real provider adapter is configured."""
-
-    def suggest_categories(
-        self,
-        *,
-        candidates: Sequence[CategorizationCandidate],
-        categories: Sequence[CategoryOption],
-    ) -> Sequence[CategorizationSuggestion]:
-        return []
-
-
 class KeywordMockCategorizationProvider(CategorizationProvider):
-    """Shared deterministic behavior for the mocked AI provider adapters."""
+    """Shared deterministic behavior for mocked AI provider adapters."""
 
     provider_name = "mock"
     confidence = 0.90
@@ -121,41 +106,3 @@ class KeywordMockCategorizationProvider(CategorizationProvider):
         )
         normalized = re.sub(r"[^a-z0-9]+", " ", normalized.casefold())
         return " ".join(normalized.split())
-
-
-class MockGeminiCategorizationProvider(KeywordMockCategorizationProvider):
-    provider_name = "Gemini"
-    confidence = 0.92
-
-
-class MockOpenAICategorizationProvider(KeywordMockCategorizationProvider):
-    provider_name = "OpenAI"
-    confidence = 0.94
-
-
-class MockGrokCategorizationProvider(KeywordMockCategorizationProvider):
-    provider_name = "Grok"
-    confidence = 0.90
-
-
-PROVIDER_ALIASES = {
-    "none": NullCategorizationProvider,
-    "mock_gemini": MockGeminiCategorizationProvider,
-    "mock_openai": MockOpenAICategorizationProvider,
-    "mock_grok": MockGrokCategorizationProvider,
-}
-
-
-def get_categorization_provider() -> CategorizationProvider:
-    provider_reference = settings.AI_CATEGORIZATION_PROVIDER
-    provider_class = PROVIDER_ALIASES.get(provider_reference)
-    if provider_class is None:
-        provider_class = import_string(provider_reference)
-    provider = provider_class()
-
-    if not isinstance(provider, CategorizationProvider):
-        raise TypeError(
-            f"{provider_reference} must implement CategorizationProvider"
-        )
-
-    return provider
