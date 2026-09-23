@@ -1,0 +1,11 @@
+Hello {{ recipient_name }},
+
+Your transaction import #{{ transaction_import.id }} is complete.
+
+Approved transactions: {{ report.approved_count }}
+Rejected transactions: {{ report.rejected_count }}
+Total income: {{ report.total_income|floatformat:2 }}
+Total expenses: {{ report.total_expenses|floatformat:2 }}
+Balance: {{ report.balance|floatformat:2 }}
+
+This message contains aggregate totals only. Open Django Simple Finance to review individual transactions.

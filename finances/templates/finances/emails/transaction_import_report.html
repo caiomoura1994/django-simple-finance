@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transaction import #{{ transaction_import.id }} completed</title>
+</head>
+<body style="margin:0;background:#f4f6f8;color:#17212b;font-family:Arial,sans-serif;">
+  <div lang="en" dir="ltr" style="max-width:600px;margin:0 auto;padding:32px 20px;">
+    <div style="background:#ffffff;border:1px solid #d9e0e7;border-radius:12px;padding:28px;">
+      <h1 style="margin:0 0 16px;font-size:24px;line-height:1.3;">Import completed</h1>
+      <p style="font-size:16px;line-height:1.6;">Hello {{ recipient_name }},</p>
+      <p style="font-size:16px;line-height:1.6;">
+        Transaction import #{{ transaction_import.id }} has finished successfully.
+      </p>
+      <table style="width:100%;border-collapse:collapse;font-size:16px;line-height:1.5;">
+        <caption style="text-align:left;font-weight:bold;padding:0 0 12px;">Import summary</caption>
+        <tbody>
+          <tr><th scope="row" style="text-align:left;padding:8px;border-bottom:1px solid #d9e0e7;">Approved</th><td style="text-align:right;padding:8px;border-bottom:1px solid #d9e0e7;">{{ report.approved_count }}</td></tr>
+          <tr><th scope="row" style="text-align:left;padding:8px;border-bottom:1px solid #d9e0e7;">Rejected</th><td style="text-align:right;padding:8px;border-bottom:1px solid #d9e0e7;">{{ report.rejected_count }}</td></tr>
+          <tr><th scope="row" style="text-align:left;padding:8px;border-bottom:1px solid #d9e0e7;">Income</th><td style="text-align:right;padding:8px;border-bottom:1px solid #d9e0e7;">{{ report.total_income|floatformat:2 }}</td></tr>
+          <tr><th scope="row" style="text-align:left;padding:8px;border-bottom:1px solid #d9e0e7;">Expenses</th><td style="text-align:right;padding:8px;border-bottom:1px solid #d9e0e7;">{{ report.total_expenses|floatformat:2 }}</td></tr>
+          <tr><th scope="row" style="text-align:left;padding:8px;">Balance</th><td style="text-align:right;padding:8px;font-weight:bold;">{{ report.balance|floatformat:2 }}</td></tr>
+        </tbody>
+      </table>
+      <p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#465463;">
+        For privacy, this email contains aggregate totals only. Open Django Simple Finance to review individual transactions.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

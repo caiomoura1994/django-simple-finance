@@ -165,6 +165,32 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
+# Mock aliases: mock_gemini, mock_openai, mock_grok, or none.
+# A dotted class path can replace them when a real adapter is implemented.
+AI_CATEGORIZATION_PROVIDER = os.getenv(
+    'AI_CATEGORIZATION_PROVIDER',
+    'mock_openai',
+)
+
+# Email defaults are safe for local study: messages are printed to the console.
+# Production can replace EMAIL_BACKEND with SMTP, SES or another Django backend.
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+DEFAULT_FROM_EMAIL = os.getenv(
+    'DEFAULT_FROM_EMAIL',
+    'Django Simple Finance <finance@example.com>',
+)
+SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@example.com')
+
+# Mock aliases: mock_resend or mock_mailgun. Both use EMAIL_BACKEND locally.
+# A dotted class path can replace them when a real adapter is implemented.
+TRANSACTION_EMAIL_PROVIDER = os.getenv(
+    'TRANSACTION_EMAIL_PROVIDER',
+    'mock_resend',
+)
+
 # Google Cloud Configuration
 GOOGLE_CLOUD_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT', '')
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')

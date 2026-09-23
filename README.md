@@ -16,26 +16,113 @@ The main engineering focus is the transaction import pipeline: an uploaded file 
 - OpenAPI schema with Swagger UI and ReDoc
 - Structured application logging with Loguru
 - Automated API and processor tests with pytest
+- Human-reviewed transaction categorization with reusable learned rules
+- Provider-neutral AI categorization contract with no vendor lock-in
+- Retryable, duplicate-aware aggregate reports by email
 
 ## Import architecture
 
 ```mermaid
-flowchart LR
-    A[Client uploads file] --> B[Django REST API]
-    B --> C[TransactionImport: PENDING]
-    C --> D[Redis queue]
-    D --> E[Celery worker]
-    E --> F[ProcessorFactory]
-    F -->|.xlsx / .xls| G[Excel processor]
-    F -->|.ofx / .qfx| H[OFX processor]
-    G --> I[Validate and map rows]
-    H --> I
-    I --> J[Categories and accounts]
-    J --> K[Transactions]
-    K --> L[Update import status and counters]
+flowchart TD
+    A[Upload Excel or OFX] --> B[Celery task]
+    B --> C[TransactionImportOrchestrator]
+    C --> D[Deterministic file parser]
+    D --> E[Apply learned rules]
+    E --> F[Ask configured AI adapter for unresolved items]
+    F --> G{Human review required?}
+    G -->|Yes| H[Create review drafts]
+    H --> I[Human approves or rejects]
+    I --> J[Resume orchestrator]
+    G -->|No| J
+    J --> K[Complete import]
+    K --> L[Queue report through configured email adapter]
 ```
 
-The `TransactionProcessor` interface keeps file-specific parsing separate from task orchestration. `ProcessorFactory` selects an implementation from the uploaded file extension, making additional formats possible without changing the Celery task.
+`finances/transaction_imports/orchestrator.py` is the walkthrough entry point.
+It contains the complete business sequence in five numbered steps: parsing,
+learned rules, AI fallback, human routing, and completion with email. The Celery
+task only starts this use case. File parsing, AI providers, and email delivery
+remain replaceable implementation details.
+
+The `TransactionProcessor` interface keeps file-specific parsing separate from
+the workflow. `ProcessorFactory` selects an implementation from the uploaded
+file extension without changing the orchestrator.
+
+## Assisted categorization
+
+OFX transactions first try a rule previously confirmed by the user. A known
+description is categorized automatically. An unknown description becomes a
+draft in `AWAITING_REVIEW`; a future AI adapter can suggest a category, but the
+transaction is only created after the user approves or corrects it.
+
+Approving with `remember_choice=true` stores a normalized description rule.
+For example, both `UBER *TRIP 8392` and `UBER *TRIP 1044` normalize to
+`uber trip` and reuse the same category. Learned rules can be edited or deleted
+through `/api/finances/transaction-category-rules/`.
+
+The provider boundary is `CategorizationProvider` in
+`finances/categorization/contracts.py`. It receives provider-neutral
+`CategorizationCandidate` and `CategoryOption` objects and must return
+structured `CategorizationSuggestion` objects. Three deterministic mocks are
+included for the walkthrough; none makes network calls:
+
+```env
+AI_CATEGORIZATION_PROVIDER=mock_openai
+```
+
+| Alias | Adapter |
+| --- | --- |
+| `mock_gemini` | Simulated Gemini categorization |
+| `mock_openai` | Simulated OpenAI categorization (default) |
+| `mock_grok` | Simulated Grok categorization |
+| `none` | No AI suggestions |
+
+The mocks match known merchant keywords to categories and return provider-
+neutral structured suggestions. To add a real provider, implement the same
+interface and configure its dotted class path. The application layer validates
+references, category ownership, and confidence before accepting a suggestion.
+
+Review endpoints:
+
+- `GET /api/finances/transaction-import-items/?review_status=PENDING_REVIEW`
+- `POST /api/finances/transaction-import-items/{id}/approve/`
+- `POST /api/finances/transaction-import-items/{id}/reject/`
+- `GET/PATCH/DELETE /api/finances/transaction-category-rules/{id}/`
+
+## Import report email
+
+An import with no pending review is completed and queues a transactional email.
+If human review is required, the same orchestrator resumes after the last item
+is approved or rejected, then queues the report. The email contains only
+aggregate counts and totals; transaction descriptions stay out of the inbox.
+
+Delivery is a separate Celery task with exponential retry. The import stores
+the delivery state, attempt count, error, and sent timestamp. A deterministic
+`X-Idempotency-Key` prevents duplicate sends when the configured backend
+supports idempotency.
+
+Local development prints emails to the console:
+
+```env
+TRANSACTION_EMAIL_PROVIDER=mock_resend
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+DEFAULT_FROM_EMAIL="Django Simple Finance <finance@example.com>"
+SUPPORT_EMAIL=support@example.com
+```
+
+| Alias | Adapter |
+| --- | --- |
+| `mock_resend` | Simulated Resend delivery (default) |
+| `mock_mailgun` | Simulated Mailgun delivery |
+
+Both mocks deliver through Django's local email backend and return deterministic
+provider message IDs. They preserve the same payload and receipt contracts a
+real Resend or Mailgun adapter must implement, without API keys or network
+calls. The selected provider and message ID are stored on the import.
+
+Production can replace the mock alias with a dotted real adapter class.
+Configure SPF, DKIM, and DMARC for the sending domain before sending real
+email.
 
 ## Technology stack
 
@@ -57,12 +144,26 @@ The `TransactionProcessor` interface keeps file-specific parsing separate from t
 business_suppliers/              Supplier and supplier-transaction APIs
 core/                            Django settings, URLs, Celery and logging
 finances/
+  categorization/
+    contracts.py                 Provider-neutral AI contract
+    providers/
+      factory.py                 AI provider selection
+      gemini_provider.py         Gemini mock adapter
+      openai_provider.py         OpenAI mock adapter
+      grok_provider.py           Grok mock adapter
   accounts/                      Account API
   categories/                    Category API
   transactions/                  Transaction and reporting APIs
   transaction_imports/
+    orchestrator.py              Complete import business workflow
+    email_providers/
+      contracts.py               Provider-neutral email contract
+      factory.py                 Email provider selection
+      resend_provider.py         Resend mock adapter
+      mailgun_provider.py        Mailgun mock adapter
     processors/                  Strategy implementations and factory
-    tasks.py                     Celery import orchestration
+    report_email_service.py      Aggregate transactional email
+    tasks.py                     Thin Celery entry points and retry policy
     transaction_import_views.py Upload, processing and template endpoints
 identity/                        Registration, authentication and profiles
 ```

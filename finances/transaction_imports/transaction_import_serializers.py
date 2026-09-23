@@ -13,10 +13,29 @@ class TransactionImportSerializer(serializers.ModelSerializer):
             'processed_items',
             'error_message',
             'celery_task_id',
+            'report_email_status',
+            'report_email_attempts',
+            'report_email_provider',
+            'report_email_message_id',
+            'report_email_sent_at',
+            'report_email_error',
             'created_at',
             'updated_at'
         ]
-        read_only_fields = ['owner', 'status', 'total_items', 'processed_items', 'error_message', 'celery_task_id']
+        read_only_fields = [
+            'owner',
+            'status',
+            'total_items',
+            'processed_items',
+            'error_message',
+            'celery_task_id',
+            'report_email_status',
+            'report_email_attempts',
+            'report_email_provider',
+            'report_email_message_id',
+            'report_email_sent_at',
+            'report_email_error',
+        ]
 
     def create(self, validated_data):
         validated_data['owner'] = self.context['request'].user
